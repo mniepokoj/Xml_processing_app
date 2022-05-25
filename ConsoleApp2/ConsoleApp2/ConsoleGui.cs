@@ -84,8 +84,9 @@ namespace ConsoleApp2
             s += "read - print selected document\n";
             s += "insert - add local document to database\n";
             s += "delete - remove selected document from database\n";
-            s += "find - print node if  element match requirements\n";
+            s += "find - print node if element match requirements\n";
             s += "modify - change value of node, text or attribute in selected document\n";
+            s += "give access - give access on document to other user\n";
             Console.WriteLine(s);
         }
 
@@ -187,7 +188,7 @@ namespace ConsoleApp2
                         {
                             if (input[1].ToLower() == "access")
                             {
-                                Console.Write(db.addUserAccess(user_id, input[2], input[3]).content);
+                                Console.Write(db.addAccountAccess(user_id, input[2], input[3]).content);
                             }
                             else
                             {

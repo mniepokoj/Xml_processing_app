@@ -29,11 +29,11 @@ namespace ConsoleApp2
             }
         }
 
-        private void update_log(int user_id, String documentName, String operation, int status)
+        private void update_log(int account_id, String docName, String operation)
         {
 
             SqlCommand command = new SqlCommand("SELECT XMLId from XMLTable WHERE name=@documentname", connection);
-            command.Parameters.Add("@documentname", SqlDbType.VarChar).Value = documentName;
+            command.Parameters.Add("@documentname", SqlDbType.VarChar).Value = docName;
             int docID;
             SqlDataReader reader = command.ExecuteReader();
             if (reader.Read())
@@ -48,18 +48,17 @@ namespace ConsoleApp2
 
             if(docID == -1)
             {
-                command = new SqlCommand("INSERT INTO XmlTable_log(UserID, operationDate, operation, statusID)" +
-                " VALUES (@UserID, @operationDate, @operation, @statusID)", connection);
-                command.Parameters.Add("@UserID", SqlDbType.Int).Value = user_id;
+                command = new SqlCommand("INSERT INTO XmlTable_log(AccountID, operationDate, operation)" +
+                " VALUES (@AccountID, @operationDate, @operation)", connection);
+                command.Parameters.Add("@AccountID", SqlDbType.Int).Value = account_id;
                 command.Parameters.Add("@operationDate", SqlDbType.DateTime).Value = (DateTime.Now).ToString("yyyy-MM-dd HH:mm:ss.fff");
                 command.Parameters.Add("@operation", SqlDbType.VarChar).Value = operation;
-                command.Parameters.Add("@statusID", SqlDbType.Int).Value = status;
             }
             else
             {
-                command = new SqlCommand("INSERT INTO XmlTable_log(UserID, DocumentID, operationDate, operation, statusID)" +
-                " VALUES (@UserID, @DocumentID, @operationDate, @operation, @statusID)", connection);
-                command.Parameters.Add("@UserID", SqlDbType.Int).Value = user_id;
+                command = new SqlCommand("INSERT INTO XmlTable_log(AccountID, DocumentID, OperationDate, Operation)" +
+                " VALUES (@AccountID, @DocumentID, @operationDate, @operation)", connection);
+                command.Parameters.Add("@AccountID", SqlDbType.Int).Value = account_id;
                 if (docID == -1)
                     command.Parameters.Add("@DocumentID", SqlDbType.Int).Value = null;
                 else
@@ -67,7 +66,6 @@ namespace ConsoleApp2
 
                 command.Parameters.Add("@operationDate", SqlDbType.DateTime).Value = (DateTime.Now).ToString("yyyy-MM-dd HH:mm:ss.fff");
                 command.Parameters.Add("@operation", SqlDbType.VarChar).Value = operation;
-                command.Parameters.Add("@statusID", SqlDbType.Int).Value = status;
             }
             command.ExecuteScalar();
         }
@@ -75,7 +73,7 @@ namespace ConsoleApp2
         public Message login(String login, String password)
         {
             
-            SqlCommand command = new SqlCommand("SELECT userID from account WHERE username=@login AND password=@pass", connection);
+            SqlCommand command = new SqlCommand("SELECT accountID from account WHERE AccountName=@login AND password=@pass", connection);
             command.Parameters.Add("@login", SqlDbType.VarChar).Value = login;
             String s = password.ToString();
             command.Parameters.Add("@pass", SqlDbType.VarChar).Value = password.ToString();
@@ -94,33 +92,33 @@ namespace ConsoleApp2
         }
 
 
-        int getXMLid(String name)
+        int getXMLid(String docName)
         {
             SqlCommand command = new SqlCommand("SELECT xmlID from XMLTable WHERE name=@name", connection);
-            command.Parameters.Add("@name", SqlDbType.VarChar).Value = name;
+            command.Parameters.Add("@name", SqlDbType.VarChar).Value = docName;
             Object o = command.ExecuteScalar();
             if (o == null)
                 return -1;
             return (int)o;
         }
 
-        int getUserId(String name)
+        int getAccountId(String accountName)
         {
-            SqlCommand command = new SqlCommand("SELECT userId from Account WHERE username=@name", connection);
-            command.Parameters.Add("@name", SqlDbType.VarChar).Value = name;
+            SqlCommand command = new SqlCommand("SELECT accountId from Account WHERE AccountName=@name", connection);
+            command.Parameters.Add("@name", SqlDbType.VarChar).Value = accountName;
             Object o = command.ExecuteScalar();
             if (o == null)
                 return -1;
             return (int)o;
         }
 
-        private bool checkAccess(int userId, String xmlDoc)
+        private bool checkAccess(int accountId, String docName)
         {
-            int xmlId = getXMLid(xmlDoc);
+            int xmlId = getXMLid(docName);
             if(xmlId != -1)
             {
                 SqlCommand command = new SqlCommand("SELECT accountID FROM XML_account WHERE accountID=@account_id AND xmlID=@xml_id", connection);
-                command.Parameters.Add("@account_id", SqlDbType.Int).Value = userId;
+                command.Parameters.Add("@account_id", SqlDbType.Int).Value = accountId;
                 command.Parameters.Add("@xml_id", SqlDbType.Int).Value = xmlId;
                 Object o = command.ExecuteScalar();
                 return o != null;
@@ -134,7 +132,7 @@ namespace ConsoleApp2
          * function whitch insert XMLdocument into dataBase
          * @param xmlDoc document to be inserted
         */
-        public Message insertXmlDocument(int user_id, String name, ref XmlDocument xmlDoc)
+        public Message insertXmlDocument(int accountId, String name, ref XmlDocument xmlDoc)
         {
             SqlCommand command = new SqlCommand("INSERT INTO XMLTable(Name, XMLColumn) VALUES (@name, @xmlDoc)", connection);
             command.Parameters.Add("@xmlDoc", SqlDbType.Xml).Value = xmlDoc.OuterXml;
@@ -144,10 +142,10 @@ namespace ConsoleApp2
             {
                 int xml_id = getXMLid(name);
                 command = new SqlCommand("INSERT INTO XML_account(accountId, XMLid) VALUES (@account_id, @xml_id)", connection);
-                command.Parameters.Add("@account_id", SqlDbType.Int).Value = user_id;
+                command.Parameters.Add("@account_id", SqlDbType.Int).Value = accountId;
                 command.Parameters.Add("@xml_id", SqlDbType.Int).Value = xml_id;
                 command.ExecuteNonQuery();
-                update_log(user_id, name, "insert", 1);
+                update_log(accountId, name, "insert");
                 return new Message(1, "Document has been written to database!\n\n");
             }
             else
@@ -174,9 +172,9 @@ namespace ConsoleApp2
                 return s;
             }
         }
-        public Message readXmlDocument(int user_id ,String name) 
+        public Message readXmlDocument(int accountId ,String name) 
         {
-            if(!checkAccess(user_id, name))
+            if(!checkAccess(accountId, name))
             {
                 return new Message(0, "You don't have acces to this document or the document doesn't exist!\n");
             }
@@ -199,9 +197,9 @@ namespace ConsoleApp2
                 return new Message(0, "Document '" + name + "' can not been found!\n");
             }
         }
-        public Message deleteXMLDocument(int user_id, String name)
+        public Message deleteXMLDocument(int accountId, String name)
         {
-            if (!checkAccess(user_id, name))
+            if (!checkAccess(accountId, name))
             {
                 return new Message(0, "You don't have acces to this document or the document doesn't exist!\n");
             }
@@ -217,7 +215,7 @@ namespace ConsoleApp2
                 command.Parameters.Add("@name", SqlDbType.VarChar).Value = name;
                 command.ExecuteNonQuery();
                 
-                update_log(user_id, name, "delete", 1);
+                update_log(accountId, name, "delete");
                 return new Message(1, "Documents have been deleted from database!\n");
             }
             else
@@ -275,9 +273,9 @@ namespace ConsoleApp2
             }
             return s;
         }
-        public Message findAttribute(int user_id ,String docName, String xpath)
+        public Message findAttribute(int accountId ,String docName, String xpath)
         {
-            if (!checkAccess(user_id, docName))
+            if (!checkAccess(accountId, docName))
             {
                 return new Message(0, "You don't have acces to this document or the document doesn't exist!\n");
             }
@@ -310,12 +308,12 @@ namespace ConsoleApp2
             }
 
         }
-        public Message getAllDocuments(int user_id)
+        public Message getAllDocuments(int accountId)
         {
             String s = "";
             SqlCommand command = new SqlCommand("SELECT name FROM XMLTable " +
-                "JOIN xml_account on xml_account.xmlId=xmlTable.xmlID WHERE xml_account.accountID = @userID", connection);
-            command.Parameters.Add("@userID", SqlDbType.Int).Value = user_id;
+                "JOIN xml_account on xml_account.xmlId=xmlTable.xmlID WHERE xml_account.accountID = @accountID", connection);
+            command.Parameters.Add("@accountID", SqlDbType.Int).Value = accountId;
             SqlDataReader reader = command.ExecuteReader();
 
             int i = 1;
@@ -334,9 +332,9 @@ namespace ConsoleApp2
                 return new Message(1, s);
             }
         }
-        private Message modifyDocument(int user_id, String docName, ref XmlDocument xmlDoc)
+        private Message modifyDocument(int accountId, String docName, ref XmlDocument xmlDoc)
         {
-            if (!checkAccess(user_id, docName))
+            if (!checkAccess(accountId, docName))
             {
                 return new Message(0, "You don't have acces to this document or the document doesn't exist!\n");
             }
@@ -346,7 +344,7 @@ namespace ConsoleApp2
             Object o = command.ExecuteScalar();
             if (o == null)
             {
-                update_log(user_id, docName, "modify", 1);
+                update_log(accountId, docName, "modify");
                 return new Message(1, "Document has been updated!\n\n");
             }
             else
@@ -355,9 +353,9 @@ namespace ConsoleApp2
                                            "Information: " + o.ToString() + "\n\n");
             }
         }
-        public Message modifyAttribute(int user_id, String docName, String xpath, String newValue)
+        public Message modifyAttribute(int accountId, String docName, String xpath, String newValue)
         {
-            if (!checkAccess(user_id, docName))
+            if (!checkAccess(accountId, docName))
             {
                 return new Message(0, "You don't have acces to this document or the document doesn't exist!\n");
             }
@@ -393,7 +391,7 @@ namespace ConsoleApp2
                             i++;
                         }
                     }
-                    this.modifyDocument(user_id, docName, ref xml);
+                    this.modifyDocument(accountId, docName, ref xml);
                 }
                 s = String.Format("Operation have been performed. {0} nodes affected.\n\n", i);
                 return new Message(1, s);
@@ -403,9 +401,9 @@ namespace ConsoleApp2
                 return new Message(0, "Document '" + docName + "' can not been found!\n");
             }
         }
-        public Message modifyContent(int user_id, String docName, String xpath, String newValue)
+        public Message modifyContent(int accountId, String docName, String xpath, String newValue)
         {
-            if (!checkAccess(user_id, docName))
+            if (!checkAccess(accountId, docName))
             {
                 return new Message(0, "You don't have acces to this document or the document doesn't exist!\n");
             }
@@ -440,7 +438,7 @@ namespace ConsoleApp2
                             }
                         }
                     }
-                    this.modifyDocument(user_id, docName, ref xml);
+                    this.modifyDocument(accountId, docName, ref xml);
                     s = String.Format("Operation have been performed. {0} nodes affected.\n\n", i);
                 }
                 return new Message(1, s);
@@ -450,9 +448,9 @@ namespace ConsoleApp2
                 return new Message(0, "Document '" + docName + "' can not been found!\n");
             }
         }
-        public Message modifyElement(int user_id, String docName, String xpath, String newValue)
+        public Message modifyElement(int accountId, String docName, String xpath, String newValue)
         {
-            if (!checkAccess(user_id, docName))
+            if (!checkAccess(accountId, docName))
             {
                 return new Message(0, "You don't have acces to this document or the document doesn't exist!\n");
             }
@@ -484,7 +482,7 @@ namespace ConsoleApp2
                             i++;
                         }
                     }
-                    this.modifyDocument(user_id, docName, ref xml);
+                    this.modifyDocument(accountId, docName, ref xml);
                     s = String.Format("Operation have been performed. {0} nodes affected.\n\n", i);
                 }
                 return new Message(1, s);
@@ -495,30 +493,30 @@ namespace ConsoleApp2
             }
         }
 
-        public Message addUserAccess(int user_id, String docName, String userName)
+        public Message addAccountAccess(int accountId, String docName, String accountName)
         {
-            if (!checkAccess(user_id, docName))
+            if (!checkAccess(accountId, docName))
             {
                 return new Message(0, "You don't have acces to this document or the document doesn't exist!\n");
             }
             int xmlId = getXMLid(docName);
-            int userId = getUserId(userName);
+            int newAccountId = getAccountId(accountName);
 
-            if(user_id == userId)
+            if(accountId == newAccountId)
             {
                 return new Message(0, "You can't give access to yourself!\n");
             }
-            if(xmlId == -1 || userId == -1)
+            if(xmlId == -1 || newAccountId == -1)
             {
-                return new Message(0, "Given username or document name doesn't exist.");
+                return new Message(0, "Given accountName or document name doesn't exist.");
             }
             else
             {
-                SqlCommand command = new SqlCommand("INSERT INTO XML_account(accountId, XMLid) VALUES (@account_id, @xml_id)", connection);
-                command.Parameters.Add("@account_id", SqlDbType.Int).Value = userId;
+                SqlCommand command = new SqlCommand("INSERT INTO Xml_Account(AccountId, XmlId) VALUES (@account_id, @xml_id)", connection);
+                command.Parameters.Add("@account_id", SqlDbType.Int).Value = newAccountId;
                 command.Parameters.Add("@xml_id", SqlDbType.Int).Value = xmlId;
                 command.ExecuteNonQuery();
-                return new Message(1, "User " + userName+" has got access to "+docName+".\n\n");
+                return new Message(1, "Account " + accountName+" has got access to "+docName+".\n\n");
             }
 
         }
