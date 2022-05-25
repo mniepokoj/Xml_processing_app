@@ -104,7 +104,7 @@ namespace ConsoleApp2
                         break;
                     case "read":
                         if (input.Length > 1)
-                            Console.Write(db.readXmlDocument(input[1]).content);
+                            Console.Write(db.readXmlDocument(user_id, input[1]).content);
                         else
                             Console.Write("Enter 'insert + name' of document to read from database!\n\n");
                         break;
@@ -114,8 +114,16 @@ namespace ConsoleApp2
                             FileReader reader = new FileReader();
                             reader.readFile(input[2]);
                             XmlDocument xmlObject = new XmlDocument();
-                            xmlObject.LoadXml(reader.Content);
-                            Console.Write(db.insertXmlDocument(user_id, input[1], ref xmlObject).content);
+                            if(reader.Good)
+                            {
+                                xmlObject.LoadXml(reader.Content);
+                                Console.Write(db.insertXmlDocument(user_id, input[1], ref xmlObject).content);
+                            }
+                            else
+                            {
+                                Console.Write("Couldn't find document with this name.");
+                            }
+
                         }
                         else
                             Console.Write("Enter 'insert nameOfDocument documentLocalPath' to insert document!\n\n");
@@ -128,7 +136,7 @@ namespace ConsoleApp2
                         break;
                     case "find":
                         if (input.Length > 1)
-                            Console.Write(db.findAttribute( input[1], input[2]).content);
+                            Console.Write(db.findAttribute(user_id, input[1], input[2]).content);
                         else
                             Console.Write("Enter 'find documentName xpath' of document to find node or attribute!\n\n");
                         break;
@@ -173,6 +181,27 @@ namespace ConsoleApp2
                         {
                             Console.Write("Specify what you want to modify: attribute, node or text");
                         }
+                        break;
+                    case "give":
+                        if (input.Length > 3)
+                        {
+                            if (input[1].ToLower() == "access")
+                            {
+                                Console.Write(db.addUserAccess(user_id, input[2], input[3]).content);
+                            }
+                            else
+                            {
+                                Console.Write("Enter 'GRANT ACCESS documentName USERNAME!\n\n");
+                            }
+                        }
+                        else
+                        {
+                            Console.Write("Enter 'GIVE ACCESS documentName USERNAME!\n\n");
+                        }
+                        break;
+                    case "logout":
+                        user_id = -1;
+                        login();
                         break;
                     default:
                         Console.Write("Command not recognized!\n\n");
