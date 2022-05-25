@@ -2,20 +2,67 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Xml;
+using System.Security;
 
 namespace ConsoleApp2
 {
     class ConsoleGui
     {
         private DbManager db;
+        private int user_id;
+
         public ConsoleGui()
         {
             db = new DbManager();
         }
 
+        public SecureString GetPassword()
+        {
+            var pwd = new SecureString();
+            while (true)
+            {
+                ConsoleKeyInfo i = Console.ReadKey(true);
+                if (i.Key == ConsoleKey.Enter)
+                {
+                    break;
+                }
+                else if (i.Key == ConsoleKey.Backspace)
+                {
+                    if (pwd.Length > 0)
+                    {
+                        pwd.RemoveAt(pwd.Length - 1);
+                        Console.Write("\b \b");
+                    }
+                }
+                else if (i.KeyChar != '\u0000') // KeyChar == '\u0000' if the key pressed does not correspond to a printable character, e.g. F1, Pause-Break, etc
+                {
+                    pwd.AppendChar(i.KeyChar);
+                    Console.Write("*");
+                }
+            }
+            return pwd;
+        }
+
+        void login()
+        {
+            Console.WriteLine("Log in to the system");
+            do
+            {
+                Console.Write("Login: ");
+                String log = Console.ReadLine();
+                SecureString pass = GetPassword();
+                Message m = db.login(log, pass);
+                Console.WriteLine(m.content);
+                user_id = m.status;
+            } while (user_id < 0);
+        }
+
         public void Start()
         {
             Console.WriteLine("Welcome in XML processing application\n");
+
+            login();
+
             Console.WriteLine("Enter command:");
 
             String input = Console.ReadLine();

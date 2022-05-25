@@ -5,7 +5,7 @@ using System.Text;
 using System.Data;
 using System.Data.SqlClient;
 using System.Xml;
-
+using System.Security;
 
 namespace ConsoleApp2
 {
@@ -14,6 +14,7 @@ namespace ConsoleApp2
         public SqlConnection connection;
         public DbManager()
         {
+            //string sqlconnection = @"DATA SOURCE=DESKTOP-0C06VAE; INITIAL CATALOG=xml_projectDB; INTEGRATED SECURITY=SSPI;";
             string sqlconnection = @"DATA SOURCE=DESKTOP-0C06VAE; INITIAL CATALOG=xml_projectDB; INTEGRATED SECURITY=SSPI;";
             connection = new SqlConnection(sqlconnection);
             try
@@ -27,6 +28,23 @@ namespace ConsoleApp2
                 Environment.Exit(-1);
             }
 
+        }
+
+        public Message login(String login, SecureString password)
+        {
+            
+            SqlCommand command = new SqlCommand("SELECT id from users WHERE login=@login, password=@pass", connection);
+            command.Parameters.Add("@login", SqlDbType.VarChar).Value = login;
+            command.Parameters.Add("@pass", SqlDbType.VarChar).Value = password.ToString();
+            SqlDataReader reader = command.ExecuteReader();
+            if(reader.Read())
+            {
+                return new Message(reader.GetInt32(0), "You have logged into the system as " + login + "\n\n");
+            }
+            else
+            {
+                return new Message(-1, "Login or password are incorrect.\n");
+            }
         }
 
 
