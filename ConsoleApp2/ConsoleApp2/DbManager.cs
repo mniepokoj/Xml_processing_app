@@ -27,39 +27,102 @@ namespace ConsoleApp2
                 Console.Error.Write(e.ToString());
                 Environment.Exit(-1);
             }
-
         }
 
-        public Message login(String login, SecureString password)
+        private void update_log(int user_id, String documentName, String operation, int status)
+        {
+
+            SqlCommand command = new SqlCommand("SELECT XMLId from XMLTable WHERE name=@documentname", connection);
+            command.Parameters.Add("@documentname", SqlDbType.VarChar).Value = documentName;
+            int docID;
+            SqlDataReader reader = command.ExecuteReader();
+            if (reader.Read())
+            {
+                docID = reader.GetInt32(0);
+            }
+            else
+            {
+                docID = -1;
+            }
+            reader.Close();
+
+            if(docID == -1)
+            {
+                command = new SqlCommand("INSERT INTO XmlTable_log(UserID, operationDate, operation, statusID)" +
+                " VALUES (@UserID, @operationDate, @operation, @statusID)", connection);
+                command.Parameters.Add("@UserID", SqlDbType.Int).Value = user_id;
+                command.Parameters.Add("@operationDate", SqlDbType.DateTime).Value = (DateTime.Now).ToString("yyyy-MM-dd HH:mm:ss.fff");
+                command.Parameters.Add("@operation", SqlDbType.VarChar).Value = operation;
+                command.Parameters.Add("@statusID", SqlDbType.Int).Value = status;
+            }
+            else
+            {
+                command = new SqlCommand("INSERT INTO XmlTable_log(UserID, DocumentID, operationDate, operation, statusID)" +
+                " VALUES (@UserID, @DocumentID, @operationDate, @operation, @statusID)", connection);
+                command.Parameters.Add("@UserID", SqlDbType.Int).Value = user_id;
+                if (docID == -1)
+                    command.Parameters.Add("@DocumentID", SqlDbType.Int).Value = null;
+                else
+                    command.Parameters.Add("@DocumentID", SqlDbType.Int).Value = docID;
+
+                command.Parameters.Add("@operationDate", SqlDbType.DateTime).Value = (DateTime.Now).ToString("yyyy-MM-dd HH:mm:ss.fff");
+                command.Parameters.Add("@operation", SqlDbType.VarChar).Value = operation;
+                command.Parameters.Add("@statusID", SqlDbType.Int).Value = status;
+            }
+            command.ExecuteScalar();
+        }
+
+        public Message login(String login, String password)
         {
             
-            SqlCommand command = new SqlCommand("SELECT id from users WHERE login=@login, password=@pass", connection);
+            SqlCommand command = new SqlCommand("SELECT userID from account WHERE username=@login AND password=@pass", connection);
             command.Parameters.Add("@login", SqlDbType.VarChar).Value = login;
+            String s = password.ToString();
             command.Parameters.Add("@pass", SqlDbType.VarChar).Value = password.ToString();
             SqlDataReader reader = command.ExecuteReader();
             if(reader.Read())
             {
-                return new Message(reader.GetInt32(0), "You have logged into the system as " + login + "\n\n");
+                int id = reader.GetInt32(0);
+                reader.Close();
+                return new Message(id, "You have logged into the system as " + login + "\n\n");
             }
             else
             {
+                reader.Close();
                 return new Message(-1, "Login or password are incorrect.\n");
             }
         }
 
 
+        int getXMLid(String name)
+        {
+            SqlCommand command = new SqlCommand("SELECT xmlID from XMLTable WHERE name=@name", connection);
+            command.Parameters.Add("@name", SqlDbType.VarChar).Value = name;
+            Object o = command.ExecuteScalar();
+            if (o == null)
+                return -1;
+            return (int)o;
+        }
+   
+
         /*
          * function whitch insert XMLdocument into dataBase
          * @param xmlDoc document to be inserted
         */
-        public Message insertXmlDocument(String name , ref XmlDocument xmlDoc)
+        public Message insertXmlDocument(int user_id, String name, ref XmlDocument xmlDoc)
         {
             SqlCommand command = new SqlCommand("INSERT INTO XMLTable(Name, XMLColumn) VALUES (@name, @xmlDoc)", connection);
             command.Parameters.Add("@xmlDoc", SqlDbType.Xml).Value = xmlDoc.OuterXml;
             command.Parameters.Add("@name", SqlDbType.VarChar).Value = name;
             Object o = command.ExecuteScalar();
-            if(o == null)
+            if (o == null)
             {
+                int xml_id = getXMLid(name);
+                command = new SqlCommand("INSERT INTO XML_account(accountId, XMLid) VALUES (@account_id, @xml_id)", connection);
+                command.Parameters.Add("@account_id", SqlDbType.Int).Value = user_id;
+                command.Parameters.Add("@xml_id", SqlDbType.Int).Value = xml_id;
+                command.ExecuteNonQuery();
+                update_log(user_id, name, "insert", 1);
                 return new Message(1, "Document has been written to database!\n\n");
             }
             else
@@ -106,15 +169,21 @@ namespace ConsoleApp2
                 return new Message(0, "Document '" + name + "' can not been found!\n");
             }
         }
-        public Message deleteXMLDocument(String name)
+        public Message deleteXMLDocument(int user_id, String name)
         {
-            SqlCommand command = new SqlCommand("DELETE FROM XMLTable where name = @name", connection);
-            command.Parameters.Add("@name", SqlDbType.VarChar).Value = name;
-            int o = command.ExecuteNonQuery();
-            if (o > 0)
+            int xmlId = getXMLid(name);
+            if(xmlId != -1)
             {
-                Message m = new Message(1, "Documents have been deleted from database!\n");
-                return m;
+                SqlCommand command = new SqlCommand("DELETE FROM XML_account where xmlId=@xmlId", connection);
+                command.Parameters.Add("@xmlId", SqlDbType.Int).Value = xmlId;
+                command.ExecuteNonQuery();
+
+                command = new SqlCommand("DELETE FROM XMLTable where name = @name", connection);
+                command.Parameters.Add("@name", SqlDbType.VarChar).Value = name;
+                command.ExecuteNonQuery();
+                
+                update_log(user_id, name, "delete", 1);
+                return new Message(1, "Documents have been deleted from database!\n");
             }
             else
             {
@@ -201,10 +270,12 @@ namespace ConsoleApp2
             }
 
         }
-        public Message getAllDocuments()
+        public Message getAllDocuments(int user_id)
         {
             String s = "";
-            SqlCommand command = new SqlCommand("SELECT name FROM XMLTable", connection);
+            SqlCommand command = new SqlCommand("SELECT name FROM XMLTable " +
+                "JOIN xml_account on xml_account.xmlId=xmlTable.xmlID WHERE xml_account.accountID = @userID", connection);
+            command.Parameters.Add("@userID", SqlDbType.Int).Value = user_id;
             SqlDataReader reader = command.ExecuteReader();
 
             int i = 1;
@@ -215,7 +286,7 @@ namespace ConsoleApp2
             reader.Close();
             if (s == "")
             {
-                return new Message(0, "There is no documents in database");
+                return new Message(0, "There is no documents in database\n\n");
             }
             else
             {
@@ -223,7 +294,7 @@ namespace ConsoleApp2
                 return new Message(1, s);
             }
         }
-        private Message modifyDocument(String docName, ref XmlDocument xmlDoc)
+        private Message modifyDocument(int user_id, String docName, ref XmlDocument xmlDoc)
         {
             SqlCommand command = new SqlCommand("UPDATE XMLTable SET XMLColumn=@XMLDoc WHERE name=@name", connection);
             command.Parameters.Add("@xmlDoc", SqlDbType.Xml).Value = xmlDoc.OuterXml;
@@ -231,6 +302,7 @@ namespace ConsoleApp2
             Object o = command.ExecuteScalar();
             if (o == null)
             {
+                update_log(user_id, docName, "modify", 1);
                 return new Message(1, "Document has been updated!\n\n");
             }
             else
@@ -239,7 +311,7 @@ namespace ConsoleApp2
                                            "Information: " + o.ToString() + "\n\n");
             }
         }
-        public Message modifyAttribute(String docName, String xpath, String newValue)
+        public Message modifyAttribute(int user_id, String docName, String xpath, String newValue)
         {
             String s = "";
             SqlCommand command = new SqlCommand("SELECT XMLColumn FROM XMLTable WHERE name = @name", connection);
@@ -273,7 +345,7 @@ namespace ConsoleApp2
                             i++;
                         }
                     }
-                    this.modifyDocument(docName, ref xml);
+                    this.modifyDocument(user_id, docName, ref xml);
                 }
                 s = String.Format("Operation have been performed. {0} nodes affected.\n\n", i);
                 return new Message(1, s);
@@ -283,7 +355,7 @@ namespace ConsoleApp2
                 return new Message(0, "Document '" + docName + "' can not been found!\n");
             }
         }
-        public Message modifyContent(String docName, String xpath, String newValue)
+        public Message modifyContent(int user_id, String docName, String xpath, String newValue)
         {
             String s = "";
             SqlCommand command = new SqlCommand("SELECT XMLColumn FROM XMLTable WHERE name = @name", connection);
@@ -316,7 +388,7 @@ namespace ConsoleApp2
                             }
                         }
                     }
-                    this.modifyDocument(docName, ref xml);
+                    this.modifyDocument(user_id, docName, ref xml);
                     s = String.Format("Operation have been performed. {0} nodes affected.\n\n", i);
                 }
                 return new Message(1, s);
@@ -326,7 +398,7 @@ namespace ConsoleApp2
                 return new Message(0, "Document '" + docName + "' can not been found!\n");
             }
         }
-        public Message modifyElement(String docName, String xpath, String newValue)
+        public Message modifyElement(int user_id, String docName, String xpath, String newValue)
         {
             String s = "";
             SqlCommand command = new SqlCommand("SELECT XMLColumn FROM XMLTable WHERE name = @name", connection);
@@ -356,7 +428,7 @@ namespace ConsoleApp2
                             i++;
                         }
                     }
-                    this.modifyDocument(docName, ref xml);
+                    this.modifyDocument(user_id, docName, ref xml);
                     s = String.Format("Operation have been performed. {0} nodes affected.\n\n", i);
                 }
                 return new Message(1, s);

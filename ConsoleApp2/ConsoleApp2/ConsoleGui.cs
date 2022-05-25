@@ -16,9 +16,9 @@ namespace ConsoleApp2
             db = new DbManager();
         }
 
-        public SecureString GetPassword()
+        public String GetPassword()
         {
-            var pwd = new SecureString();
+            String pwd = "";
             while (true)
             {
                 ConsoleKeyInfo i = Console.ReadKey(true);
@@ -30,13 +30,13 @@ namespace ConsoleApp2
                 {
                     if (pwd.Length > 0)
                     {
-                        pwd.RemoveAt(pwd.Length - 1);
+                        pwd.Remove(pwd.Length - 1);
                         Console.Write("\b \b");
                     }
                 }
-                else if (i.KeyChar != '\u0000') // KeyChar == '\u0000' if the key pressed does not correspond to a printable character, e.g. F1, Pause-Break, etc
+                else if (i.KeyChar != '\u0000')
                 {
-                    pwd.AppendChar(i.KeyChar);
+                    pwd += i.KeyChar;
                     Console.Write("*");
                 }
             }
@@ -48,9 +48,11 @@ namespace ConsoleApp2
             Console.WriteLine("Log in to the system");
             do
             {
-                Console.Write("Login: ");
+                Console.Write("Login:\n");
                 String log = Console.ReadLine();
-                SecureString pass = GetPassword();
+                Console.Write("Password:\n");
+                String pass = GetPassword();
+                Console.WriteLine();
                 Message m = db.login(log, pass);
                 Console.WriteLine(m.content);
                 user_id = m.status;
@@ -98,7 +100,7 @@ namespace ConsoleApp2
                         writeHelp();
                         break;
                     case "list":
-                        Console.Write(db.getAllDocuments().content);
+                        Console.Write(db.getAllDocuments(user_id).content);
                         break;
                     case "read":
                         if (input.Length > 1)
@@ -113,20 +115,20 @@ namespace ConsoleApp2
                             reader.readFile(input[2]);
                             XmlDocument xmlObject = new XmlDocument();
                             xmlObject.LoadXml(reader.Content);
-                            Console.Write(db.insertXmlDocument(input[1], ref xmlObject).content);
+                            Console.Write(db.insertXmlDocument(user_id, input[1], ref xmlObject).content);
                         }
                         else
                             Console.Write("Enter 'insert nameOfDocument documentLocalPath' to insert document!\n\n");
                         break;
                     case "delete":
                         if (input.Length > 1)
-                            Console.Write(db.deleteXMLDocument(input[1]).content);
+                            Console.Write(db.deleteXMLDocument(user_id, input[1]).content);
                         else
                             Console.Write("Enter 'get + name' of document to read from database!\n\n");
                         break;
                     case "find":
                         if (input.Length > 1)
-                            Console.Write(db.findAttribute(input[1], input[2]).content);
+                            Console.Write(db.findAttribute( input[1], input[2]).content);
                         else
                             Console.Write("Enter 'find documentName xpath' of document to find node or attribute!\n\n");
                         break;
@@ -137,7 +139,7 @@ namespace ConsoleApp2
                             {
                                 if(input.Length > 4)
                                 {
-                                    Console.Write(db.modifyContent(input[2], input[3], input[4]).content);
+                                    Console.Write(db.modifyContent(user_id, input[2], input[3], input[4]).content);
                                 }
                                 else
                                 {
@@ -148,7 +150,7 @@ namespace ConsoleApp2
                             {
                                 if (input.Length > 4)
                                 {
-                                    Console.Write(db.modifyAttribute(input[2], input[3], input[4]).content);
+                                    Console.Write(db.modifyAttribute(user_id, input[2], input[3], input[4]).content);
                                 }
                                 else
                                 {
@@ -159,7 +161,7 @@ namespace ConsoleApp2
                             {
                                 if (input.Length > 4)
                                 {
-                                    Console.Write(db.modifyElement(input[2], input[3], input[4]).content);
+                                    Console.Write(db.modifyElement(user_id, input[2], input[3], input[4]).content);
                                 }
                                 else
                                 {
