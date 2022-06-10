@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.IO;
 
-namespace ConsoleApp2
+namespace Project_app
 {
     class FileReader
     {
@@ -22,11 +22,11 @@ namespace ConsoleApp2
         }
 
         public FileReader() {  }
-        public void readFile(in String filename)
+        public void ReadFile(in String filename)
         {
             try
             {
-                content = File.ReadAllText("../../../"+filename);
+                content = File.ReadAllText(filename);
                 good = true;
             }
             catch(Exception)

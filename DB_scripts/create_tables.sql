@@ -7,16 +7,13 @@ CREATE TABLE [dbo].[Account](
 	[AccountName] [varchar](255) NOT NULL UNIQUE,
 	[Password] [varchar](255) NOT NULL)
 
-
-
 CREATE TABLE [dbo].[XMLTable](
 	[XmlId] [int] IDENTITY(1,1) NOT NULL PRIMARY KEY,
 	[Name] [varchar](255) NOT NULL UNIQUE,
 	[XmlColumn] [xml] NULL)
 
-
-CREATE TABLE [dbo].[XmlTable_log](
-	[AccountID] [int] NULL,
+CREATE TABLE [dbo].[XmlTable_log]
+(
 	[XmlID] [int] NULL,
 	[OperationDate] [date] NULL,
 	[Operation] [varchar](255) NOT NULL

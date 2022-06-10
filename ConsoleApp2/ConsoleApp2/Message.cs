@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace ConsoleApp2
+namespace Project_app
 {
-    class Message
+    public class Message
     {
         public int status;
         public string content;

@@ -4,12 +4,12 @@ using System.Text;
 using System.Xml;
 using System.Security;
 
-namespace ConsoleApp2
+namespace Project_app
 {
     class ConsoleGui
     {
-        private DbManager db;
-        private int user_id;
+        readonly private DbManager db;
+        private int accountId;
 
         public ConsoleGui()
         {
@@ -30,7 +30,7 @@ namespace ConsoleApp2
                 {
                     if (pwd.Length > 0)
                     {
-                        pwd.Remove(pwd.Length - 1);
+                        pwd = pwd.Remove(pwd.Length - 1);
                         Console.Write("\b \b");
                     }
                 }
@@ -43,40 +43,40 @@ namespace ConsoleApp2
             return pwd;
         }
 
-        void login()
+        void Login()
         {
             Console.WriteLine("Log in to the system");
             do
             {
-                Console.Write("Login:\n");
+                Console.Write("Login: ");
                 String log = Console.ReadLine();
-                Console.Write("Password:\n");
+                Console.Write("Password: ");
                 String pass = GetPassword();
                 Console.WriteLine();
-                Message m = db.login(log, pass);
+                Message m = db.Login(log, pass);
                 Console.WriteLine(m.content);
-                user_id = m.status;
-            } while (user_id < 0);
+                accountId = m.status;
+            } while (accountId < 0);
         }
 
         public void Start()
         {
             Console.WriteLine("Welcome in XML processing application\n");
 
-            login();
+            Login();
 
             Console.WriteLine("Enter command:");
 
             String input = Console.ReadLine();
             while(input.ToLower() != "exit"  && input.ToLower() != "quit" && input.ToLower() != "q")
             {
-                handleEvent(input);
+                HandleEvent(input);
                 Console.WriteLine("Enter command:");
                 input = Console.ReadLine();
             }
         }
 
-        private void writeHelp()
+        private void WriteHelp()
         {
             String s = "\n";
             s += "Available command: \n";
@@ -86,11 +86,13 @@ namespace ConsoleApp2
             s += "delete - remove selected document from database\n";
             s += "find - print node if element match requirements\n";
             s += "modify - change value of node, text or attribute in selected document\n";
-            s += "give access - give access on document to other user\n";
+            s += "give access - give access on document to other account\n";
+            s += "logout - log out user and go back to log in part\n";
+            s += "exit - close terminate\n";
             Console.WriteLine(s);
         }
 
-        private void handleEvent(String s)
+        private void HandleEvent(String s)
         {
             String[] input  = s.Split(' ');
             if(input.Length > 0)
@@ -98,14 +100,14 @@ namespace ConsoleApp2
                 switch(input[0].ToLower())
                 {
                     case "help":
-                        writeHelp();
+                        WriteHelp();
                         break;
                     case "list":
-                        Console.Write(db.getAllDocuments(user_id).content);
+                        Console.Write(db.GetAllDocuments(accountId).content);
                         break;
                     case "read":
                         if (input.Length > 1)
-                            Console.Write(db.readXmlDocument(user_id, input[1]).content);
+                            Console.Write(db.ReadXmlDocument(accountId, input[1]).content);
                         else
                             Console.Write("Enter 'insert + name' of document to read from database!\n\n");
                         break;
@@ -113,12 +115,12 @@ namespace ConsoleApp2
                         if (input.Length > 2)
                         {
                             FileReader reader = new FileReader();
-                            reader.readFile(input[2]);
+                            reader.ReadFile(input[2]);
                             XmlDocument xmlObject = new XmlDocument();
                             if(reader.Good)
                             {
                                 xmlObject.LoadXml(reader.Content);
-                                Console.Write(db.insertXmlDocument(user_id, input[1], ref xmlObject).content);
+                                Console.Write(db.InsertXmlDocument(accountId, input[1], ref xmlObject).content);
                             }
                             else
                             {
@@ -131,51 +133,26 @@ namespace ConsoleApp2
                         break;
                     case "delete":
                         if (input.Length > 1)
-                            Console.Write(db.deleteXMLDocument(user_id, input[1]).content);
+                            Console.Write(db.DeleteXMLDocument(accountId, input[1]).content);
                         else
                             Console.Write("Enter 'get + name' of document to read from database!\n\n");
                         break;
                     case "find":
                         if (input.Length > 1)
-                            Console.Write(db.findAttribute(user_id, input[1], input[2]).content);
+                            Console.Write(db.FindElement(accountId, input[1], input[2]).content);
                         else
                             Console.Write("Enter 'find documentName xpath' of document to find node or attribute!\n\n");
                         break;
                     case "modify":
                         if(input.Length > 1)
                         {
-                            if(input[1].ToLower() == "text")
+                            if(input.Length > 3)
                             {
-                                if(input.Length > 4)
-                                {
-                                    Console.Write(db.modifyContent(user_id, input[2], input[3], input[4]).content);
-                                }
-                                else
-                                {
-                                    Console.Write("Enter 'modify text documentName xPath newValue' to modify text!\n\n");
-                                }
+                                Console.Write(db.ModifyElement(accountId, input[1], input[2], input[3]).content);
                             }
-                            else if(input[1].ToLower() == "attribute")
+                            else
                             {
-                                if (input.Length > 4)
-                                {
-                                    Console.Write(db.modifyAttribute(user_id, input[2], input[3], input[4]).content);
-                                }
-                                else
-                                {
-                                    Console.Write("Enter 'modify attribute documentName xPath newValue' to modify attribute!\n\n");
-                                }
-                            }
-                            else if (input[1].ToLower() == "element")
-                            {
-                                if (input.Length > 4)
-                                {
-                                    Console.Write(db.modifyElement(user_id, input[2], input[3], input[4]).content);
-                                }
-                                else
-                                {
-                                    Console.Write("Enter 'modify element documentName xPath newValue' to modify element name!\n\n");
-                                }
+                                Console.Write("Enter 'modify documentName xPath newValue' to modify text!\n\n");
                             }
                         }
                         else
@@ -188,21 +165,21 @@ namespace ConsoleApp2
                         {
                             if (input[1].ToLower() == "access")
                             {
-                                Console.Write(db.addAccountAccess(user_id, input[2], input[3]).content);
+                                Console.Write(db.AddAccountAccess(accountId, input[2], input[3]).content);
                             }
                             else
                             {
-                                Console.Write("Enter 'GRANT ACCESS documentName USERNAME!\n\n");
+                                Console.Write("Enter 'GRANT ACCESS documentName AccountName!\n\n");
                             }
                         }
                         else
                         {
-                            Console.Write("Enter 'GIVE ACCESS documentName USERNAME!\n\n");
+                            Console.Write("Enter 'GIVE ACCESS documentName AccountName!\n\n");
                         }
                         break;
                     case "logout":
-                        user_id = -1;
-                        login();
+                        accountId = -1;
+                        Login();
                         break;
                     default:
                         Console.Write("Command not recognized!\n\n");

@@ -5,11 +5,11 @@ using System.Data.SqlClient;
 using System.Xml;
 
 
-namespace ConsoleApp2
+namespace Project_app
 {
     class App
     {
-        static void Main(string[] args)
+        static void Main()
         {
             ConsoleGui gui = new ConsoleGui();
             gui.Start();
