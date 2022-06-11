@@ -6,6 +6,9 @@ using System.Security;
 
 namespace Project_app
 {
+    /*
+     * Console application class
+    */
     class ConsoleGui
     {
         readonly private DbManager db;
@@ -92,6 +95,9 @@ namespace Project_app
             Console.WriteLine(s);
         }
 
+        /*
+         * loop which proccessing user events
+        */
         private void HandleEvent(String s)
         {
             String[] input  = s.Split(' ');

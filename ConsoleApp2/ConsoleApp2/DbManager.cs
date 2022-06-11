@@ -6,13 +6,15 @@ using System.Xml;
 
 namespace Project_app
 {
+    /*
+     * Class for comunicating with db
+     * Provide needed api
+     */
     public class DbManager
     {
         public SqlConnection connection;
         public DbManager()
         {
-            //
-            
             connection = new SqlConnection(Project_app.Connection.Sqlconnection);
             try
             {
@@ -26,6 +28,10 @@ namespace Project_app
             }
         }
 
+        /*
+         * Log in user do database
+         * @return id of logged in user or -1 if parameters are incorrect
+         */
         public Message Login(String login, String password)
         {
             
@@ -46,7 +52,9 @@ namespace Project_app
             }
         }
 
-
+        /*
+         * @return XMLId based on document name or -1 if document not matched
+         */
         int GetXMLid(String docName)
         {
             SqlCommand command = new SqlCommand("SELECT xmlID from XMLTable WHERE name=@name", connection);
@@ -57,7 +65,10 @@ namespace Project_app
             return (int)o;
         }
 
-
+        /*
+         * Test if there is element that xpath match
+         * @return -1 if Node doesnt exist
+         */
         public int CheckNodeExist(String docName, String xpath)
         {
             SqlCommand command = new SqlCommand("SELECT XmlColumn.exist('"+xpath+"') FROM xmlTable WHERE name='@docName'", connection);
@@ -68,16 +79,9 @@ namespace Project_app
             return (int)o;
         }
 
-        int GetDocumentId(String docName)
-        {
-            SqlCommand command = new SqlCommand("SELECT XmlId from XmlTable WHERE name=@name", connection);
-            command.Parameters.Add("@name", SqlDbType.VarChar).Value = docName;
-            Object o = command.ExecuteScalar();
-            if (o == null)
-                return -1;
-            return (int)o;
-        }
-
+        /*
+         * @return XMLId based on document name or -1 if document not matched
+         */
         int GetAccountId(String accountName)
         {
             SqlCommand command = new SqlCommand("SELECT accountId from Account WHERE AccountName=@name", connection);
@@ -88,6 +92,9 @@ namespace Project_app
             return (int)o;
         }
 
+        /*
+         * modify element based on parameters
+         */
         int ReplaceElement(String docName, String xpath, String newValue)
         {
             SqlCommand command = new SqlCommand("UPDATE XMLTable " +
@@ -100,6 +107,10 @@ namespace Project_app
             return (int)o;
         }
 
+        /*
+         * check if user have access to document
+         * @return true if access is given
+         */
         private bool CheckAccess(int accountId, String docName)
         {
             int xmlId = GetXMLid(docName);
@@ -117,8 +128,7 @@ namespace Project_app
    
 
         /*
-         * function whitch insert XMLdocument into dataBase
-         * @param xmlDoc document to be inserted
+         * function which insert XMLdocument into dataBase
         */
         public Message InsertXmlDocument(int accountId, String name, ref XmlDocument xmlDoc)
         {
@@ -136,6 +146,10 @@ namespace Project_app
                 return new Message(0, e.Message + "\n\n");
             }
         }
+
+        /*
+         * Processing node to write in on console
+        */
         private String PrintElement(XmlNode xn)
         {
             if(xn.Attributes.Count == 0)
@@ -154,6 +168,10 @@ namespace Project_app
                 return s;
             }
         }
+
+        /*
+         * write on console xmldocument from database
+        */
         public Message ReadXmlDocument(int accountId ,String name) 
         {
             if(!CheckAccess(accountId, name))
@@ -179,6 +197,10 @@ namespace Project_app
                 return new Message(0, "Document '" + name + "' can not been found!\n");
             }
         }
+
+        /*
+         * delete document from database
+        */
         public Message DeleteXMLDocument(int accountId, String docName)
         {
             SqlCommand command = new SqlCommand("EXEC delete_xml_doc_proc @docname, @accountid", connection);
@@ -194,6 +216,12 @@ namespace Project_app
                 return new Message(0, e.Message + "\n\n");
             }
         }
+
+        /*
+         * @param depth parameter for tabulators
+         * check type of node and processing them properly
+         * @return string of formatted each branch
+        */
         private String ReadNodes(XmlNode xn, String depth="")
         {
             String s = "";
@@ -244,6 +272,10 @@ namespace Project_app
             }
             return s;
         }
+
+        /*
+         * find part of xml document from database
+        */
         public Message FindElement(int accountId ,String docName, String xpath)
         {
             if (!CheckAccess(accountId, docName))
@@ -277,8 +309,11 @@ namespace Project_app
                 reader.Close();
                 return new Message(0, "Document '" + docName + "' can not been found!\n");
             }
-
         }
+
+        /*
+         * list all document which user have access to
+        */
         public Message GetAllDocuments(int accountId)
         {
             String s = "";
@@ -303,6 +338,11 @@ namespace Project_app
                 return new Message(1, s);
             }
         }
+
+        /*
+         * modify element from xml document
+         * this function is a wrapper for 'ReplaceElement' function
+        */
         public Message ModifyElement(int accountId, String docName, String xpath, String newValue)
         {
             if (!CheckAccess(accountId, docName))
@@ -324,10 +364,11 @@ namespace Project_app
                     return new Message(1, "Value have been modified succesfully!\n");
                 }
             }
-            
-
         }
 
+        /*
+         * grand access to xml document to another user
+        */
         public Message AddAccountAccess(int accountId, String docName, String accountName)
         {
             if (!CheckAccess(accountId, docName))
